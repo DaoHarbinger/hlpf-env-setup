@@ -2,40 +2,49 @@
 - Name: Федоренко Олександр Романович
 - Group: 232/1
 
-## Results of commands
+## Практичне заняття №2 — NestJS + PostgreSQL + Redis
 
-```text
-> docker --version
-Docker version 29.2.1, build a5c7197
+## Структура репозиторію
+├── src/ # NestJS source code
+├── Dockerfile
+├── docker-compose.yml
+├── .env.example # шаблон змінних оточення
+├── .dockerignore
+└── README.md
 
-> docker compose version
-Docker Compose version v5.0.2
 
-> docker run --rm hello-world
+## Запуск проекту
+```bash
+cp .env.example .env
+docker compose up --build
 
-Hello from Docker!
-This message shows that your installation appears to be working correctly.
+> docker compose ps
+NAME                        IMAGE                COMMAND                  SERVICE    CREATED          STATUS                    PORTS
+hlpf-env-setup-app-1        hlpf-env-setup-app   "docker-entrypoint.s…"   app        21 minutes ago   Up 21 minutes             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
+hlpf-env-setup-postgres-1   postgres:16-alpine   "docker-entrypoint.s…"   postgres   21 minutes ago   Up 21 minutes (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+hlpf-env-setup-redis-1      redis:7-alpine       "docker-entrypoint.s…"   redis      21 minutes ago   Up 21 minutes (healthy)   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
 
-To generate this message, Docker took the following steps:
-1. The Docker client contacted the Docker daemon.
-2. The Docker daemon pulled the "hello-world" image from the Docker Hub.
-   (amd64)
-3. The Docker daemon created a new container from that image which runs the
-   executable that produces the output you are currently reading.
-4. The Docker daemon streamed that output to the Docker client, which sent it
-   to your terminal.
+> docker compose exec postgres psql -U nestuser -d nestdb -c '\l'
+                                                      List of databases
+   Name    |  Owner   | Encoding | Locale Provider |  Collate   |   Ctype    | ICU Locale | ICU Rules |   Access privileges
+-----------+----------+----------+-----------------+------------+------------+------------+-----------+-----------------------
+ nestdb    | nestuser | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           |
+ postgres  | nestuser | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           |
+ template0 | nestuser | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           | =c/nestuser          +
+           |          |          |                 |            |            |            |           | nestuser=CTc/nestuser
+ template1 | nestuser | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           | =c/nestuser          +
+           |          |          |                 |            |            |            |           | nestuser=CTc/nestuser
+(4 rows)
 
-To try something more ambitious, you can run an Ubuntu container with:
-$ docker run -it ubuntu bash
+> docker compose exec redis redis-cli ping
+PONG
 
-Share images, automate workflows, and more with a free Docker ID:
-https://hub.docker.com/
+> curl -UseBasicParsing http://localhost:3000
+Hello World!
 
-For more examples and ideas, visit:
-https://docs.docker.com/get-started/
-
-> docker compose run --rm npm npm -v
-11.11.0
-
-> docker compose run --rm npm node --version
-v25.8.0
+> docker compose logs app | tail -20
+[Nest] 1  - 04/01/2026, 10:00:00 AM     LOG [NestFactory] Starting Nest application...
+[Nest] 1  - 04/01/2026, 10:00:00 AM     LOG [InstanceLoader] ConfigModule dependencies initialized
+[Nest] 1  - 04/01/2026, 10:00:00 AM     LOG [InstanceLoader] TypeOrmModule dependencies initialized
+[Nest] 1  - 04/01/2026, 10:00:00 AM     LOG [InstanceLoader] CacheModule dependencies initialized
+[Nest] 1  - 04/01/2026, 10:00:00 AM     LOG [NestApplication] Nest application successfully started
