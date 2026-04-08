@@ -5,6 +5,12 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-yet';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { Category } from './categories/category.entity';
+import { Product } from './products/product.entity';
+import { CategoriesModule } from './categories/categories.module';
+import { ProductsModule } from './products/products.module';
+import { CreateTables1700000001000 } from './migrations/1700000001000-CreateTables';
+import { AddIsActiveToProducts1775678202884 } from './migrations/1775678202884-AddIsActiveToProducts';
 
 @Module({
   imports: [
@@ -16,8 +22,10 @@ import { AppService } from './app.service';
       username: process.env.POSTGRES_USER,
       password: process.env.POSTGRES_PASSWORD,
       database: process.env.POSTGRES_DB,
-      entities: [],
-      synchronize: true,
+      entities: [Category, Product],
+      synchronize: false,
+      migrationsRun: true,
+      migrations: [CreateTables1700000001000, AddIsActiveToProducts1775678202884],
     }),
     CacheModule.registerAsync({
       isGlobal: true,
@@ -31,6 +39,8 @@ import { AppService } from './app.service';
         ttl: 60 * 1000,
       }),
     }),
+    CategoriesModule,
+    ProductsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
