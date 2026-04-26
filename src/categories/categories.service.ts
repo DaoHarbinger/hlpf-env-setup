@@ -1,18 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Category } from './category.entity';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
 export class CategoriesService {
-  constructor(
-    @InjectRepository(Category)
-    private readonly categoryRepo: Repository<Category>,
-  ) {}
+  constructor(@InjectRepository(Category) private readonly categoryRepo: Repository<Category>) {}
 
-  async findAll(): Promise<Category[]> {
-    return this.categoryRepo.find();
-  }
+  async findAll(): Promise<Category[]> { return this.categoryRepo.find(); }
 
   async findOne(id: number): Promise<Category> {
     const category = await this.categoryRepo.findOne({ where: { id } });
@@ -20,19 +17,13 @@ export class CategoriesService {
     return category;
   }
 
-  async create(data: Partial<Category>): Promise<Category> {
-    const category = this.categoryRepo.create(data);
+  async create(dto: CreateCategoryDto): Promise<Category> { return this.categoryRepo.save(this.categoryRepo.create(dto)); }
+
+  async update(id: number, dto: UpdateCategoryDto): Promise<Category> {
+    const category = await this.findOne(id);
+    Object.assign(category, dto);
     return this.categoryRepo.save(category);
   }
 
-  async update(id: number, data: Partial<Category>): Promise<Category> {
-    const category = await this.findOne(id);
-    Object.assign(category, data);
-    return this.categoryRepo.save(category);
-  }
-
-  async remove(id: number): Promise<void> {
-    const category = await this.findOne(id);
-    await this.categoryRepo.remove(category);
-  }
+  async remove(id: number): Promise<void> { await this.categoryRepo.remove(await this.findOne(id)); }
 }

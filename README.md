@@ -1,50 +1,70 @@
-## Student
+
+### Student
 - Name: Федоренко Олександр Романович
 - Group: 232/1
 
-## Практичне заняття №2 — NestJS + PostgreSQL + Redis
+## Практичне заняття №4 — DTO + class-validator + Pipes
 
-## Структура репозиторію
-├── src/ # NestJS source code
+### Структура репозиторію
+
+├── src/
+│ ├── categories/
+│ │ ├── dto/
+│ │ │ ├── create-category.dto.ts
+│ │ │ └── update-category.dto.ts
+│ │ ├── category.entity.ts
+│ │ ├── categories.module.ts
+│ │ ├── categories.service.ts
+│ │ └── categories.controller.ts
+│ ├── products/
+│ │ ├── dto/
+│ │ │ ├── create-product.dto.ts
+│ │ │ └── update-product.dto.ts
+│ │ ├── product.entity.ts
+│ │ ├── products.module.ts
+│ │ ├── products.service.ts
+│ │ └── products.controller.ts
+│ ├── common/
+│ │ └── pipes/
+│ │ └── trim.pipe.ts
+│ ├── migrations/
+│ ├── data-source.ts
+│ ├── main.ts
+│ └── app.module.ts
 ├── Dockerfile
 ├── docker-compose.yml
-├── .env.example # шаблон змінних оточення
-├── .dockerignore
 └── README.md
 
-
-## Запуск проекту
+### Запуск проекту
 ```bash
 cp .env.example .env
 docker compose up --build
 
-> docker compose ps
-NAME                        IMAGE                COMMAND                  SERVICE    CREATED          STATUS                    PORTS
-hlpf-env-setup-app-1        hlpf-env-setup-app   "docker-entrypoint.s…"   app        21 minutes ago   Up 21 minutes             0.0.0.0:3000->3000/tcp, [::]:3000->3000/tcp
-hlpf-env-setup-postgres-1   postgres:16-alpine   "docker-entrypoint.s…"   postgres   21 minutes ago   Up 21 minutes (healthy)   0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
-hlpf-env-setup-redis-1      redis:7-alpine       "docker-entrypoint.s…"   redis      21 minutes ago   Up 21 minutes (healthy)   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+### Результати тестування валідації та TrimPipe
 
-> docker compose exec postgres psql -U nestuser -d nestdb -c '\l'
-                                                      List of databases
-   Name    |  Owner   | Encoding | Locale Provider |  Collate   |   Ctype    | ICU Locale | ICU Rules |   Access privileges
------------+----------+----------+-----------------+------------+------------+------------+-----------+-----------------------
- nestdb    | nestuser | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           |
- postgres  | nestuser | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           |
- template0 | nestuser | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           | =c/nestuser          +
-           |          |          |                 |            |            |            |           | nestuser=CTc/nestuser
- template1 | nestuser | UTF8     | libc            | en_US.utf8 | en_US.utf8 |            |           | =c/nestuser          +
-           |          |          |                 |            |            |            |           | nestuser=CTc/nestuser
-(4 rows)
+```text
+# Тест 1: валідне створення категорії
+> Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/categories" -ContentType "application/json" -Body '{"name":"Валідна","description":"Опис"}'
+(успішно створено, якщо назва унікальна)
 
-> docker compose exec redis redis-cli ping
-PONG
+# Тест 2: порожнє ім'я категорії → 400 Bad Request
+> try { Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/categories" -ContentType "application/json" -Body '{"name":""}' } catch { $_.Exception.Response.StatusCode.value__ }
+400
 
-> curl -UseBasicParsing http://localhost:3000
-Hello World!
+# Тест 3: від'ємна ціна продукту → 400 Bad Request
+> try { Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/products" -ContentType "application/json" -Body '{"name":"Тест","price":-5}' } catch { $_.Exception.Response.StatusCode.value__ }
+400
 
-> docker compose logs app | tail -20
-[Nest] 1  - 04/01/2026, 10:00:00 AM     LOG [NestFactory] Starting Nest application...
-[Nest] 1  - 04/01/2026, 10:00:00 AM     LOG [InstanceLoader] ConfigModule dependencies initialized
-[Nest] 1  - 04/01/2026, 10:00:00 AM     LOG [InstanceLoader] TypeOrmModule dependencies initialized
-[Nest] 1  - 04/01/2026, 10:00:00 AM     LOG [InstanceLoader] CacheModule dependencies initialized
-[Nest] 1  - 04/01/2026, 10:00:00 AM     LOG [NestApplication] Nest application successfully started
+# Тест 4: зайве поле isAdmin → 400 Bad Request (forbidNonWhitelisted)
+> try { Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/categories" -ContentType "application/json" -Body '{"name":"Назва","isAdmin":true}' } catch { $_.Exception.Response.StatusCode.value__ }
+400
+
+# Тест 5: TrimPipe – обрізання пробілів
+> Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/categories" -ContentType "application/json" -Body '{"name":"  Trimmed  "}' | Select-Object -Property name
+name
+----
+Trimmed
+
+# Тест 6: валідне створення продукту (після створення категорії з id=1)
+> Invoke-RestMethod -Method Post -Uri "http://localhost:3000/api/products" -ContentType "application/json" -Body '{"name":"Ноутбук","price":1500.50,"stock":10,"categoryId":1}'
+(успішно створено)
