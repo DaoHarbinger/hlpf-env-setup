@@ -15,7 +15,14 @@ import { AddIsActiveToProducts1775678202884 } from './migrations/1775678202884-A
 import { User } from './users/user.entity';
 import { UsersModule } from './users/users.module';
 import { CreateUsers1778091093828 } from './migrations/1778091093828-CreateUsers'; //src/migrations/1778091093828-CreateUsers.ts
-import { AuthModule } from './auth/auth.module';  
+import { AuthModule } from './auth/auth.module'; 
+
+import { Order } from './orders/entities/order.entity';
+import { OrderItem } from './orders/entities/order-item.entity';
+import { CreateOrders1779645998949 } from './migrations/1779645998949-CreateOrders';
+import { OrdersModule } from './orders/orders.module';
+
+
 
 @Module({
   imports: [
@@ -27,10 +34,10 @@ import { AuthModule } from './auth/auth.module';
       username: process.env.POSTGRES_USER,
       password: process.env.POSTGRES_PASSWORD,
       database: process.env.POSTGRES_DB,
-      entities: [Category, Product, User], 
+      entities: [Category, Product, User, Order, OrderItem,],
       synchronize: false,
       migrationsRun: true,
-      migrations: [CreateTables1700000001000, AddIsActiveToProducts1775678202884, CreateUsers1778091093828],
+      migrations: [CreateTables1700000001000, AddIsActiveToProducts1775678202884, CreateUsers1778091093828, CreateOrders1779645998949,],
     }),
     CacheModule.registerAsync({
       isGlobal: true,
@@ -47,7 +54,8 @@ import { AuthModule } from './auth/auth.module';
     CategoriesModule,
     ProductsModule,
     UsersModule,
-    AuthModule, 
+    AuthModule,
+    OrdersModule, 
   ],
   controllers: [AppController],
   providers: [AppService],
