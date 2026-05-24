@@ -3,7 +3,7 @@
 - Name: Федоренко Олександр Романович
 - Group: 232/1
 
-## Практичне заняття №6 — Interceptors + Exception Filters + Swagger
+## Практичне заняття №7 — Redis кешування + Query параметри + Pagination
 
 ### Структура репозиторію
 
@@ -31,11 +31,12 @@ hlpf-env-setup/
 │   ├── products/
 │   │   ├── dto/
 │   │   │   ├── create-product.dto.ts
-│   │   │   └── update-product.dto.ts
+│   │   │   ├── update-product.dto.ts
+│   │   │   └── product-query.dto.ts         
 │   │   ├── product.entity.ts
 │   │   ├── products.controller.ts
 │   │   ├── products.module.ts
-│   │   └── products.service.ts
+│   │   └── products.service.ts              
 │   ├── common/
 │   │   ├── decorators/
 │   │   │   ├── current-user.decorator.ts
@@ -55,7 +56,10 @@ hlpf-env-setup/
 │   ├── migrations/
 │   │   ├── 1700000001000-CreateTables.ts
 │   │   ├── 1775678202884-AddIsActiveToProducts.ts
-│   │   └── 1778091093828-CreateUsers.ts
+│   │   ├── 1778091093828-CreateUsers.ts
+│   │   └── (можливі інші міграції)
+│   ├── seeds/                                 
+│   │   └── seed.ts
 │   ├── app.controller.ts
 │   ├── app.module.ts
 │   ├── app.service.ts
@@ -72,50 +76,56 @@ hlpf-env-setup/
 ├── package.json
 ├── package-lock.json
 ├── README.md
-├── swagger-screenshot.png
+├── swagger-screenshot.png                     
 ├── tsconfig.build.json
 └── tsconfig.json
 
-### Запуск проекту
 
+### Запуск проекту
 ```bash
 cp .env.example .env
 docker compose up --build
+docker compose run --rm app npm run seed   # наповнити БД тестовими даними
 
+Тест пагінації
 
-Swagger UI
-http://localhost:3000/api/docs
+> $response = Invoke-RestMethod -Uri "http://localhost:3000/api/products?page=2&pageSize=5"
+> $response.data.meta
+page pageSize total totalPages
+---- -------- ----- ----------
+2    5        35    7
 
-https://swagger-screenshot.png
+Тест фільтрації за категорією
 
-Формат успішної відповіді (TransformInterceptor)
+> $response = Invoke-RestMethod -Uri "http://localhost:3000/api/products?categoryId=1"
+> $response.data.items.Count
 
-{
-  "data": { ... },
-  "statusCode": 200,
-  "timestamp": "2025-01-15T10:30:00.000Z"
-}
+Тест діапазону цін
 
-Формат помилки (HttpExceptionFilter)
+> $response = Invoke-RestMethod -Uri "http://localhost:3000/api/products?minPrice=100&maxPrice=1000"
+> $response.data.items | Select-Object -Property name, price
 
-{
-  "error": {
-    "code": 400,
-    "message": "Validation failed",
-    "details": ["name must be longer..."],
-    "traceId": "a1b2c3..."
-  },
-  "timestamp": "..."
-}
+Тест пошуку
 
-Приклад логів (LoggingInterceptor)
+> $response = Invoke-RestMethod -Uri "http://localhost:3000/api/products?search=mac"
+> $response.data.items | Select-Object -Property name
 
-[Nest] 29  - 05/06/2026, 9:21:43 PM     LOG [HTTP] POST /auth/login --- 200 --- 50ms
-[Nest] 29  - 05/06/2026, 9:27:30 PM     LOG [HTTP] POST /api/products --- 201 --- 14ms
-[Nest] 29  - 05/06/2026, 9:29:39 PM     LOG [HTTP] GET /api/products/1 --- 200 --- 12ms
+Тест валідації pageSize (max 100)
 
-Тест помилки з traceId
+> try { Invoke-RestMethod -Uri "http://localhost:3000/api/products?pageSize=999" -ErrorAction Stop } catch { $_.Exception.Response.StatusCode.value__ }
+400
 
+Кешування (Redis)
 
-> curl http://localhost:3000/api/products/999
-{"error":{"code":404,"message":"Product #999 not found","traceId":"..."}}
+# Після першого запиту з'являються ключі
+docker compose exec redis redis-cli KEYS "products:*"
+
+Інвалідація кешу
+
+# Після створення/оновлення/видалення продукту кеш очищається
+docker compose exec redis redis-cli KEYS "products:*"  # (empty array)
+
+Seed скрипт
+
+docker compose run --rm app npm run seed
+# Вивід: Seed complete: 3 categories, 30 products
